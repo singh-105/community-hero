@@ -9,7 +9,7 @@ interface AppContextType {
   drives: VolunteeringDrive[];
   leaderboard: UserProfile[];
   loading: boolean;
-  reportIssue: (title: string, description: string, category: IssueCategory, address: string, imageURL?: string) => Promise<string>;
+  reportIssue: (title: string, description: string, category: IssueCategory, location: { lat: number; lng: number; address: string }, imageURL?: string) => Promise<string>;
   upvoteIssue: (issueId: string) => Promise<void>;
   updateIssueStatus: (issueId: string, status: 'assigned' | 'in_progress' | 'resolved', notes?: string, resolvedImageUrl?: string) => Promise<void>;
   rsvpDrive: (driveId: string) => Promise<void>;
@@ -198,15 +198,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     title: string,
     description: string,
     category: IssueCategory,
-    address: string,
+    location: { lat: number; lng: number; address: string },
     imageURL?: string
   ): Promise<string> => {
     if (!user) throw new Error("User must be signed in.");
-
-    const baseLat = 12.9716;
-    const baseLng = 77.5946;
-    const offsetLat = (Math.random() - 0.5) * 0.08;
-    const offsetLng = (Math.random() - 0.5) * 0.08;
 
     if (isFirebaseAvailable && db) {
       const issuesCol = collection(db, 'issues');
@@ -217,7 +212,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         title,
         description,
         category,
-        location: { lat: baseLat + offsetLat, lng: baseLng + offsetLng, address },
+        location,
         imageURL: imageURL || '',
         imageUrl: imageURL || '',
         status: 'reported',
@@ -242,7 +237,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         title,
         description,
         category,
-        location: { lat: baseLat + offsetLat, lng: baseLng + offsetLng, address },
+        location,
         imageURL: imageURL || '',
         imageUrl: imageURL || '',
         resolvedImageUrl: '',

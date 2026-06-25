@@ -1,8 +1,62 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useApp } from '../context/AppContext';
 import { useAuth } from '../context/AuthContext';
 import type { IssueCategory } from '../types';
 import { AlertTriangle, Trash2, CheckCircle2, Hammer, MapPin, Camera, Sparkles, ArrowRight, ArrowLeft } from 'lucide-react';
+import { APIProvider, useMapsLibrary } from '@vis.gl/react-google-maps';
+
+interface PlaceAutocompleteInputProps {
+  onPlaceSelect: (address: string, lat: number, lng: number) => void;
+  initialValue: string;
+}
+
+const PlaceAutocompleteInput: React.FC<PlaceAutocompleteInputProps> = ({ onPlaceSelect, initialValue }) => {
+  const [inputValue, setInputValue] = useState(initialValue);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const places = useMapsLibrary('places');
+
+  useEffect(() => {
+    if (!places || !inputRef.current) return;
+
+    const options = {
+      fields: ['geometry', 'formatted_address', 'name'],
+    };
+
+    const autocomplete = new places.Autocomplete(inputRef.current, options);
+
+    autocomplete.addListener('place_changed', () => {
+      const place = autocomplete.getPlace();
+      if (place.geometry && place.geometry.location) {
+        const address = place.formatted_address || place.name || '';
+        const lat = place.geometry.location.lat();
+        const lng = place.geometry.location.lng();
+        setInputValue(address);
+        onPlaceSelect(address, lat, lng);
+      }
+    });
+
+    return () => {
+      if (typeof google !== 'undefined' && google.maps && google.maps.event) {
+        google.maps.event.clearInstanceListeners(autocomplete);
+      }
+    };
+  }, [places, onPlaceSelect]);
+
+  return (
+    <input
+      ref={inputRef}
+      type="text"
+      required
+      value={inputValue}
+      onChange={(e) => {
+        setInputValue(e.target.value);
+        onPlaceSelect(e.target.value, 19.0760, 72.8777); // Mumbai default fallback
+      }}
+      placeholder="e.g. Gateway of India, Colaba, Mumbai"
+      className="w-full bg-slate-50 hover:bg-slate-50/70 focus:bg-white text-xs font-semibold px-4 py-2.5 rounded-xl border border-slate-200 focus:border-primary-blue focus:ring-1 focus:ring-primary-blue outline-none transition-all"
+    />
+  );
+};
 
 interface ReportWizardProps {
   onGoToFeed: () => void;
@@ -39,6 +93,7 @@ export const ReportWizard: React.FC<ReportWizardProps> = ({ onGoToFeed }) => {
   // Step 3 fields — pre-populate title from category, user can override
   const [title, setTitle] = useState(LABEL_MAP['pothole']);
   const [address, setAddress] = useState('');
+  const [coordinates, setCoordinates] = useState<{ lat: number; lng: number }>({ lat: 19.0760, lng: 72.8777 });
   const [description, setDescription] = useState('');
 
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -92,6 +147,7 @@ export const ReportWizard: React.FC<ReportWizardProps> = ({ onGoToFeed }) => {
     setTitle(LABEL_MAP['pothole']);
     setDescription('');
     setAddress('');
+    setCoordinates({ lat: 19.0760, lng: 72.8777 });
     setSelectedFile(null);
     setPreviewUrl(null);
     setIsFinished(false);
@@ -120,7 +176,7 @@ export const ReportWizard: React.FC<ReportWizardProps> = ({ onGoToFeed }) => {
         });
       }
 
-      const newId = await reportIssue(title, description, category, address, uploadedUrl);
+      const newId = await reportIssue(title, description, category, { ...coordinates, address }, uploadedUrl);
       setReportId(newId);
       setIsFinished(true);
     } catch (err: any) {
@@ -149,7 +205,7 @@ export const ReportWizard: React.FC<ReportWizardProps> = ({ onGoToFeed }) => {
     const selectedCat = CATEGORIES.find(c => c.id === category);
     return (
       <div className="mx-auto max-w-md bg-white border border-slate-200 rounded-3xl p-8 text-center shadow-lg animate-scale-up mt-6 space-y-6">
-        <div className="success-checkmark py-4">
+        <div className="success-checkmark h-24">
           <div className="check-icon">
             <span className="icon-line line-tip"></span>
             <span className="icon-line line-long"></span>
@@ -158,7 +214,7 @@ export const ReportWizard: React.FC<ReportWizardProps> = ({ onGoToFeed }) => {
           </div>
         </div>
 
-        <div className="space-y-2">
+        <div className="space-y-2 relative z-10">
           <h2 className="font-extrabold text-slate-800 text-xl tracking-tight">Issue Reported Successfully! 🎉</h2>
           <p className="text-slate-400 text-xs font-semibold leading-relaxed">
             Your complaint has been successfully registered, pinned on the Civic Hotspot Map, and dispatched to Ward Inspectors.
@@ -348,14 +404,15 @@ export const ReportWizard: React.FC<ReportWizardProps> = ({ onGoToFeed }) => {
               <label className="block text-xs font-bold text-slate-500 uppercase mb-1.5 flex items-center gap-1">
                 <MapPin className="h-3.5 w-3.5 text-accent-orange animate-pulse" /> Local Landmark Address
               </label>
-              <input
-                type="text"
-                required
-                value={address}
-                onChange={(e) => setAddress(e.target.value)}
-                placeholder="e.g. 2nd cross road, Koramangala 1st Block"
-                className="w-full bg-slate-50 hover:bg-slate-50/70 focus:bg-white text-xs font-semibold px-4 py-2.5 rounded-xl border border-slate-200 focus:border-primary-blue focus:ring-1 focus:ring-primary-blue outline-none transition-all"
-              />
+              <APIProvider apiKey={import.meta.env.VITE_GOOGLE_MAPS_API_KEY} libraries={['places']}>
+                <PlaceAutocompleteInput
+                  initialValue={address}
+                  onPlaceSelect={(addr, lat, lng) => {
+                    setAddress(addr);
+                    setCoordinates({ lat, lng });
+                  }}
+                />
+              </APIProvider>
             </div>
 
             <div>

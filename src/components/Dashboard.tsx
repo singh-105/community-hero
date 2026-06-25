@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import type { Issue } from '../types';
 import { IssueCard } from './IssueCard';
 import { InteractiveMap } from './InteractiveMap';
+import { CivicMap } from './CivicMap';
 import { Map, Grid, Filter, ArrowUpRight, Flame, Trophy, Plus, HelpCircle, CheckCircle, Clock, AlertTriangle } from 'lucide-react';
 
 interface DashboardProps {
@@ -22,6 +23,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
   const displayLeaderboard = leaderboard.length > 0 ? leaderboard : (user ? [user] : []);
   
   const [viewMode, setViewMode] = useState<'grid' | 'map'>('grid');
+  const [showMap, setShowMap] = useState(false);
   const [catFilter, setCatFilter] = useState<string>('all');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [sortBy, setSortBy] = useState<'date' | 'upvotes'>('upvotes');
@@ -211,6 +213,21 @@ export const Dashboard: React.FC<DashboardProps> = ({
                   {st.charAt(0).toUpperCase() + st.slice(1).replace('_', ' ')}
                 </button>
               ))}
+
+              <div className="h-5 w-[1px] bg-slate-200 mx-1.5 hidden sm:block" />
+
+              <button
+                type="button"
+                onClick={() => setShowMap(!showMap)}
+                className={`px-3 py-1.5 rounded-lg text-xs font-bold border transition-all cursor-pointer flex items-center gap-1.5 ${
+                  showMap
+                    ? 'bg-primary-blue border-primary-blue text-white shadow-xs'
+                    : 'bg-white border-slate-200 text-slate-600 hover:text-slate-900 hover:bg-slate-50'
+                }`}
+              >
+                <Map className="h-3.5 w-3.5" />
+                <span>Map View</span>
+              </button>
             </div>
 
             {/* Right Tools: View Switchers and Sort dropdown */}
@@ -259,7 +276,11 @@ export const Dashboard: React.FC<DashboardProps> = ({
           </div>
 
           {/* Feed Content */}
-          <div className="w-full">
+          <div className="w-full space-y-6">
+            {showMap && (
+              <CivicMap onSelectIssue={onSelectIssue} issues={filteredIssues} />
+            )}
+            <div className="w-full">
             {viewMode === 'map' ? (
               <InteractiveMap issues={filteredIssues} onSelectIssue={onSelectIssue} />
             ) : issues.length === 0 ? (
@@ -288,6 +309,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
                 ))}
               </div>
             )}
+          </div>
           </div>
 
         </div>
