@@ -1,52 +1,11 @@
-import React, { useState, useRef } from 'react';
+import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
 import { useAuth } from '../context/AuthContext';
 import type { IssueCategory } from '../types';
 import { AlertTriangle, Trash2, CheckCircle2, Hammer, MapPin, Camera, Sparkles, ArrowRight, ArrowLeft } from 'lucide-react';
 import { Autocomplete, useJsApiLoader } from '@react-google-maps/api';
 
-interface PlaceAutocompleteInputProps {
-  onPlaceSelect: (address: string, lat: number, lng: number) => void;
-  initialValue: string;
-}
 
-const PlaceAutocompleteInput: React.FC<PlaceAutocompleteInputProps> = ({ onPlaceSelect, initialValue }) => {
-  const [inputValue, setInputValue] = useState(initialValue);
-  const autocompleteRef = useRef<google.maps.places.Autocomplete | null>(null);
-
-  const onLoad = (autocomplete: google.maps.places.Autocomplete) => {
-    autocompleteRef.current = autocomplete;
-  };
-
-  const onPlaceChanged = () => {
-    if (autocompleteRef.current) {
-      const place = autocompleteRef.current.getPlace();
-      if (place.geometry && place.geometry.location) {
-        const address = place.formatted_address || place.name || '';
-        const lat = place.geometry.location.lat();
-        const lng = place.geometry.location.lng();
-        setInputValue(address);
-        onPlaceSelect(address, lat, lng);
-      }
-    }
-  };
-
-  return (
-    <Autocomplete onLoad={onLoad} onPlaceChanged={onPlaceChanged}>
-      <input
-        type="text"
-        required
-        value={inputValue}
-        onChange={(e) => {
-          setInputValue(e.target.value);
-          onPlaceSelect(e.target.value, 12.9716, 77.5946); // Bangalore default fallback
-        }}
-        placeholder="e.g. 2nd cross road, Koramangala 1st Block"
-        className="w-full bg-slate-50 hover:bg-slate-50/70 focus:bg-white text-xs font-semibold px-4 py-2.5 rounded-xl border border-slate-200 focus:border-primary-blue focus:ring-1 focus:ring-primary-blue outline-none transition-all"
-      />
-    </Autocomplete>
-  );
-};
 
 interface ReportWizardProps {
   onGoToFeed: () => void;
@@ -88,8 +47,22 @@ export const ReportWizard: React.FC<ReportWizardProps> = ({ onGoToFeed }) => {
   // Step 3 fields — pre-populate title from category, user can override
   const [title, setTitle] = useState(LABEL_MAP['pothole']);
   const [address, setAddress] = useState('');
-  const [coordinates, setCoordinates] = useState<{ lat: number; lng: number }>({ lat: 12.9716, lng: 77.5946 });
+  const [lat, setLat] = useState<number>(12.9716);
+  const [lng, setLng] = useState<number>(77.5946);
+  const [autocomplete, setAutocomplete] = useState<any>(null);
   const [description, setDescription] = useState('');
+
+  const onPlaceChanged = () => {
+    if (autocomplete) {
+      const place = autocomplete.getPlace();
+      const addr = place.formatted_address || place.name || '';
+      const placeLat = place.geometry?.location?.lat() || 12.9716;
+      const placeLng = place.geometry?.location?.lng() || 77.5946;
+      setAddress(addr);
+      setLat(placeLat);
+      setLng(placeLng);
+    }
+  };
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isFinished, setIsFinished] = useState(false);
@@ -142,7 +115,8 @@ export const ReportWizard: React.FC<ReportWizardProps> = ({ onGoToFeed }) => {
     setTitle(LABEL_MAP['pothole']);
     setDescription('');
     setAddress('');
-    setCoordinates({ lat: 12.9716, lng: 77.5946 });
+    setLat(12.9716);
+    setLng(77.5946);
     setSelectedFile(null);
     setPreviewUrl(null);
     setIsFinished(false);
@@ -171,7 +145,7 @@ export const ReportWizard: React.FC<ReportWizardProps> = ({ onGoToFeed }) => {
         });
       }
 
-      const newId = await reportIssue(title, description, category, { ...coordinates, address }, uploadedUrl);
+      const newId = await reportIssue(title, description, category, lat, lng, address, uploadedUrl);
       setReportId(newId);
       setIsFinished(true);
     } catch (err: any) {
@@ -400,21 +374,23 @@ export const ReportWizard: React.FC<ReportWizardProps> = ({ onGoToFeed }) => {
                 <MapPin className="h-3.5 w-3.5 text-accent-orange animate-pulse" /> Local Landmark Address
               </label>
               {isLoaded ? (
-                <PlaceAutocompleteInput
-                  initialValue={address}
-                  onPlaceSelect={(addr, lat, lng) => {
-                    setAddress(addr);
-                    setCoordinates({ lat, lng });
-                  }}
-                />
+                <Autocomplete onLoad={setAutocomplete} onPlaceChanged={onPlaceChanged}>
+                  <input
+                    type="text"
+                    value={address}
+                    onChange={(e) => setAddress(e.target.value)}
+                    placeholder="Start typing your address..."
+                    className="w-full bg-slate-50 focus:bg-white text-xs font-semibold px-4 py-2.5 rounded-xl border border-slate-200 focus:border-primary-blue outline-none transition-all"
+                  />
+                </Autocomplete>
               ) : (
                 <input
                   type="text"
                   required
                   value={address}
                   onChange={(e) => setAddress(e.target.value)}
-                  placeholder="e.g. 2nd cross road, Koramangala 1st Block"
-                  className="w-full bg-slate-50 hover:bg-slate-50/70 focus:bg-white text-xs font-semibold px-4 py-2.5 rounded-xl border border-slate-200 focus:border-primary-blue focus:ring-1 focus:ring-primary-blue outline-none transition-all"
+                  placeholder="Start typing your address..."
+                  className="w-full bg-slate-50 focus:bg-white text-xs font-semibold px-4 py-2.5 rounded-xl border border-slate-200 focus:border-primary-blue outline-none transition-all"
                 />
               )}
             </div>

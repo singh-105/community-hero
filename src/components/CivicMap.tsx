@@ -12,12 +12,12 @@ interface CivicMapProps {
 
 export const CivicMap: React.FC<CivicMapProps> = ({ onSelectIssue, issues: propIssues }) => {
   const [issues, setIssues] = useState<Issue[]>(propIssues || []);
-  const [selectedPin, setSelectedPin] = useState<Issue | null>(null);
-  const [heatmapEnabled, setHeatmapEnabled] = useState(false);
+  const [selectedIssue, setSelectedIssue] = useState<any>(null);
+  const [showHeatmap, setShowHeatmap] = useState(false);
 
   const { isLoaded } = useJsApiLoader({
     googleMapsApiKey: import.meta.env.VITE_GOOGLE_MAPS_API_KEY,
-    libraries: ['visualization', 'places'],
+    libraries: ['visualization', 'places'] as any,
   });
 
   // Real-time Firestore Sync
@@ -144,7 +144,7 @@ export const CivicMap: React.FC<CivicMapProps> = ({ onSelectIssue, issues: propI
           }}
         >
           {/* Heatmap Overlay */}
-          {heatmapEnabled && heatmapData.length > 0 && (
+          {window.google && showHeatmap === true && heatmapData.length > 0 && (
             <HeatmapLayer
               data={heatmapData}
               options={{
@@ -155,7 +155,7 @@ export const CivicMap: React.FC<CivicMapProps> = ({ onSelectIssue, issues: propI
           )}
 
           {/* Custom Marker Pins & Clusterer */}
-          {!heatmapEnabled && (
+          {!showHeatmap && (
             <MarkerClusterer>
               {(clusterer) => (
                 <>
@@ -169,7 +169,7 @@ export const CivicMap: React.FC<CivicMapProps> = ({ onSelectIssue, issues: propI
                         position={{ lat: issue.location.lat, lng: issue.location.lng }}
                         clusterer={clusterer}
                         icon={getCategoryMarkerIcon(issue.category)}
-                        onClick={() => setSelectedPin(issue)}
+                        onClick={() => setSelectedIssue(issue)}
                       />
                     );
                   })}
@@ -179,31 +179,34 @@ export const CivicMap: React.FC<CivicMapProps> = ({ onSelectIssue, issues: propI
           )}
 
           {/* InfoWindow */}
-          {selectedPin && selectedPin.location && (
+          {selectedIssue !== null && selectedIssue.location && (
             <InfoWindow
-              position={{ lat: selectedPin.location.lat, lng: selectedPin.location.lng }}
-              onCloseClick={() => setSelectedPin(null)}
+              position={{ lat: selectedIssue.location.lat, lng: selectedIssue.location.lng }}
+              onCloseClick={() => setSelectedIssue(null)}
             >
               <div className="p-2 space-y-2 text-slate-800 max-w-[240px]">
-                <h4 className="font-extrabold text-sm leading-snug">{selectedPin.title}</h4>
+                <h4 className="font-extrabold text-sm leading-snug">{selectedIssue.title}</h4>
                 <div className="flex flex-wrap gap-1.5">
                   <span className="text-[9px] font-black bg-blue-50 border border-blue-200/50 px-2 py-0.5 rounded text-primary-blue uppercase">
-                    {selectedPin.category}
+                    {selectedIssue.category}
                   </span>
-                  <span className={`text-[9px] font-black border px-2 py-0.5 rounded uppercase ${getStatusBg(selectedPin.status)}`}>
-                    {selectedPin.status}
+                  <span className={`text-[9px] font-black border px-2 py-0.5 rounded uppercase ${getStatusBg(selectedIssue.status)}`}>
+                    {selectedIssue.status}
                   </span>
                 </div>
+                <p className="text-[10px] text-slate-500 font-semibold leading-relaxed">
+                  Address: <span className="text-slate-700 font-bold">{selectedIssue.location.address || 'N/A'}</span>
+                </p>
                 <p className="text-[10px] text-slate-500 font-semibold">
-                  Reported by: <span className="text-slate-700 font-bold">{selectedPin.reportedByName || 'Citizen Hero'}</span>
+                  Reported by: <span className="text-slate-700 font-bold">{selectedIssue.reportedByName || 'Citizen Hero'}</span>
                 </p>
                 <p className="text-[9px] text-slate-400 font-medium">
-                  {formatDate(selectedPin.createdAt)}
+                  {formatDate(selectedIssue.createdAt)}
                 </p>
                 <button
                   onClick={() => {
-                    onSelectIssue(selectedPin);
-                    setSelectedPin(null);
+                    onSelectIssue(selectedIssue);
+                    setSelectedIssue(null);
                   }}
                   className="w-full mt-1.5 flex items-center justify-center bg-primary-blue hover:bg-primary-blue-hover text-white text-xs font-bold py-1.5 rounded-lg transition-all shadow-xs cursor-pointer"
                 >
@@ -223,14 +226,14 @@ export const CivicMap: React.FC<CivicMapProps> = ({ onSelectIssue, issues: propI
         {/* Heatmap Toggle Button (Top-Right overlay) */}
         <div className="absolute top-3 right-3 z-10">
           <button
-            onClick={() => setHeatmapEnabled(!heatmapEnabled)}
+            onClick={() => setShowHeatmap(!showHeatmap)}
             className={`px-3 py-1.5 rounded-xl text-xs font-bold shadow-md transition-all cursor-pointer border flex items-center gap-1.5 ${
-              heatmapEnabled
+              showHeatmap
                 ? 'bg-accent-orange border-accent-orange text-white'
                 : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50'
             }`}
           >
-            <Flame className={`h-4 w-4 ${heatmapEnabled ? 'fill-white animate-bounce' : 'text-slate-500'}`} />
+            <Flame className={`h-4 w-4 ${showHeatmap ? 'fill-white animate-bounce' : 'text-slate-500'}`} />
             <span>Heatmap Overlay</span>
           </button>
         </div>
