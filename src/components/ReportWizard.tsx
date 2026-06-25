@@ -50,9 +50,9 @@ const PlaceAutocompleteInput: React.FC<PlaceAutocompleteInputProps> = ({ onPlace
       value={inputValue}
       onChange={(e) => {
         setInputValue(e.target.value);
-        onPlaceSelect(e.target.value, 19.0760, 72.8777); // Mumbai default fallback
+        onPlaceSelect(e.target.value, 12.9716, 77.5946); // Bangalore default fallback
       }}
-      placeholder="e.g. Gateway of India, Colaba, Mumbai"
+      placeholder="e.g. 2nd cross road, Koramangala 1st Block"
       className="w-full bg-slate-50 hover:bg-slate-50/70 focus:bg-white text-xs font-semibold px-4 py-2.5 rounded-xl border border-slate-200 focus:border-primary-blue focus:ring-1 focus:ring-primary-blue outline-none transition-all"
     />
   );
@@ -93,7 +93,7 @@ export const ReportWizard: React.FC<ReportWizardProps> = ({ onGoToFeed }) => {
   // Step 3 fields — pre-populate title from category, user can override
   const [title, setTitle] = useState(LABEL_MAP['pothole']);
   const [address, setAddress] = useState('');
-  const [coordinates, setCoordinates] = useState<{ lat: number; lng: number }>({ lat: 19.0760, lng: 72.8777 });
+  const [coordinates, setCoordinates] = useState<{ lat: number; lng: number }>({ lat: 12.9716, lng: 77.5946 });
   const [description, setDescription] = useState('');
 
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -147,7 +147,7 @@ export const ReportWizard: React.FC<ReportWizardProps> = ({ onGoToFeed }) => {
     setTitle(LABEL_MAP['pothole']);
     setDescription('');
     setAddress('');
-    setCoordinates({ lat: 19.0760, lng: 72.8777 });
+    setCoordinates({ lat: 12.9716, lng: 77.5946 });
     setSelectedFile(null);
     setPreviewUrl(null);
     setIsFinished(false);

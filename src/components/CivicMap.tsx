@@ -113,7 +113,7 @@ export const CivicMap: React.FC<CivicMapProps> = ({ onSelectIssue, issues: propI
             title: data.title || '',
             description: data.description || '',
             category: data.category || 'other',
-            location: data.location || { lat: 19.0760, lng: 72.8777, address: '' },
+            location: data.location || { lat: 12.9716, lng: 77.5946, address: '' },
             imageURL: data.imageURL || data.imageUrl || '',
             imageUrl: data.imageURL || data.imageUrl || '',
             resolvedImageUrl: data.resolvedImageUrl || '',
@@ -176,9 +176,9 @@ export const CivicMap: React.FC<CivicMapProps> = ({ onSelectIssue, issues: propI
           libraries={['visualization', 'places']}
         >
           <Map
-            defaultCenter={{ lat: 19.0760, lng: 72.8777 }}
+            defaultCenter={{ lat: 12.9716, lng: 77.5946 }}
             defaultZoom={12}
-            mapId="DEMO_MAP_ID"
+            mapId="community-hero-map"
             gestureHandling="cooperative"
             disableDefaultUI={false}
             style={{ width: '100%', height: '100%' }}
