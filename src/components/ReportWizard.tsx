@@ -3,7 +3,8 @@ import { useApp } from '../context/AppContext';
 import { useAuth } from '../context/AuthContext';
 import type { IssueCategory } from '../types';
 import { AlertTriangle, Trash2, CheckCircle2, Hammer, MapPin, Camera, Sparkles, ArrowRight, ArrowLeft } from 'lucide-react';
-import { Autocomplete, useJsApiLoader } from '@react-google-maps/api';
+import { Autocomplete } from '@react-google-maps/api';
+import { useGoogleMaps } from '../hooks/useGoogleMaps';
 
 
 
@@ -43,10 +44,7 @@ export const ReportWizard: React.FC<ReportWizardProps> = ({ onGoToFeed }) => {
   const [address, setAddress] = useState('');
   const [description, setDescription] = useState('');
 
-  const { isLoaded: mapsLoaded } = useJsApiLoader({
-    googleMapsApiKey: import.meta.env.VITE_GOOGLE_MAPS_API_KEY,
-    libraries: ['places'] as any,
-  });
+  const { isLoaded: mapsLoaded } = useGoogleMaps();
   const [autocomplete, setAutocomplete] = useState<any>(null);
   const [lat, setLat] = useState(12.9716);
   const [lng, setLng] = useState(77.5946);

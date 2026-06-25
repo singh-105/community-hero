@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { GoogleMap, useJsApiLoader, Marker, InfoWindow, HeatmapLayer } from '@react-google-maps/api';
+import { GoogleMap, Marker, InfoWindow, HeatmapLayer } from '@react-google-maps/api';
+import { useGoogleMaps } from '../hooks/useGoogleMaps';
 import { isFirebaseAvailable, db } from '../firebase';
 import { collection, onSnapshot } from 'firebase/firestore';
 import { Flame } from 'lucide-react';
@@ -15,10 +16,7 @@ export const CivicMap: React.FC<CivicMapProps> = ({ onSelectIssue, issues: propI
   const [selectedIssue, setSelectedIssue] = useState<any>(null);
   const [showHeatmap, setShowHeatmap] = useState(false);
 
-  const { isLoaded } = useJsApiLoader({
-    googleMapsApiKey: import.meta.env.VITE_GOOGLE_MAPS_API_KEY,
-    libraries: ['visualization', 'places'] as any,
-  });
+  const { isLoaded } = useGoogleMaps();
 
   // Real-time Firestore Sync
   useEffect(() => {
