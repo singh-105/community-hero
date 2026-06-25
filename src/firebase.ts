@@ -3,12 +3,12 @@ import { getFirestore } from 'firebase/firestore';
 import { getAuth } from 'firebase/auth';
 
 const firebaseConfig = {
-  apiKey: "AIzaSyCrUKwW6tVyVQlj1XEg-wUSz2REt4hCp8I",
-  authDomain: "community-hero-66083.firebaseapp.com",
-  projectId: "community-hero-66083",
-  storageBucket: "community-hero-66083.firebasestorage.app",
-  messagingSenderId: "46161820054",
-  appId: "1:46161820054:web:dc95145404faf8fb4005b7"
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+  appId: import.meta.env.VITE_FIREBASE_APP_ID,
 };
 
 let app;
@@ -22,7 +22,7 @@ try {
   auth = getAuth(app);
   isFirebaseAvailable = true;
 } catch (error) {
-  console.warn("Firebase failed to initialize. Falling back to LocalStorage.", error);
+  console.warn("Firebase failed to initialize.", error);
 }
 
 export { app, db, auth, isFirebaseAvailable };
