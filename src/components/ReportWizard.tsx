@@ -1,9 +1,9 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useRef } from 'react';
 import { useApp } from '../context/AppContext';
 import { useAuth } from '../context/AuthContext';
 import type { IssueCategory } from '../types';
 import { AlertTriangle, Trash2, CheckCircle2, Hammer, MapPin, Camera, Sparkles, ArrowRight, ArrowLeft } from 'lucide-react';
-import { APIProvider, useMapsLibrary } from '@vis.gl/react-google-maps';
+import { Autocomplete } from '@react-google-maps/api';
 
 interface PlaceAutocompleteInputProps {
   onPlaceSelect: (address: string, lat: number, lng: number) => void;
@@ -12,20 +12,15 @@ interface PlaceAutocompleteInputProps {
 
 const PlaceAutocompleteInput: React.FC<PlaceAutocompleteInputProps> = ({ onPlaceSelect, initialValue }) => {
   const [inputValue, setInputValue] = useState(initialValue);
-  const inputRef = useRef<HTMLInputElement>(null);
-  const places = useMapsLibrary('places');
+  const autocompleteRef = useRef<google.maps.places.Autocomplete | null>(null);
 
-  useEffect(() => {
-    if (!places || !inputRef.current) return;
+  const onLoad = (autocomplete: google.maps.places.Autocomplete) => {
+    autocompleteRef.current = autocomplete;
+  };
 
-    const options = {
-      fields: ['geometry', 'formatted_address', 'name'],
-    };
-
-    const autocomplete = new places.Autocomplete(inputRef.current, options);
-
-    autocomplete.addListener('place_changed', () => {
-      const place = autocomplete.getPlace();
+  const onPlaceChanged = () => {
+    if (autocompleteRef.current) {
+      const place = autocompleteRef.current.getPlace();
       if (place.geometry && place.geometry.location) {
         const address = place.formatted_address || place.name || '';
         const lat = place.geometry.location.lat();
@@ -33,28 +28,23 @@ const PlaceAutocompleteInput: React.FC<PlaceAutocompleteInputProps> = ({ onPlace
         setInputValue(address);
         onPlaceSelect(address, lat, lng);
       }
-    });
-
-    return () => {
-      if (typeof google !== 'undefined' && google.maps && google.maps.event) {
-        google.maps.event.clearInstanceListeners(autocomplete);
-      }
-    };
-  }, [places, onPlaceSelect]);
+    }
+  };
 
   return (
-    <input
-      ref={inputRef}
-      type="text"
-      required
-      value={inputValue}
-      onChange={(e) => {
-        setInputValue(e.target.value);
-        onPlaceSelect(e.target.value, 12.9716, 77.5946); // Bangalore default fallback
-      }}
-      placeholder="e.g. 2nd cross road, Koramangala 1st Block"
-      className="w-full bg-slate-50 hover:bg-slate-50/70 focus:bg-white text-xs font-semibold px-4 py-2.5 rounded-xl border border-slate-200 focus:border-primary-blue focus:ring-1 focus:ring-primary-blue outline-none transition-all"
-    />
+    <Autocomplete onLoad={onLoad} onPlaceChanged={onPlaceChanged}>
+      <input
+        type="text"
+        required
+        value={inputValue}
+        onChange={(e) => {
+          setInputValue(e.target.value);
+          onPlaceSelect(e.target.value, 12.9716, 77.5946); // Bangalore default fallback
+        }}
+        placeholder="e.g. 2nd cross road, Koramangala 1st Block"
+        className="w-full bg-slate-50 hover:bg-slate-50/70 focus:bg-white text-xs font-semibold px-4 py-2.5 rounded-xl border border-slate-200 focus:border-primary-blue focus:ring-1 focus:ring-primary-blue outline-none transition-all"
+      />
+    </Autocomplete>
   );
 };
 
@@ -404,15 +394,13 @@ export const ReportWizard: React.FC<ReportWizardProps> = ({ onGoToFeed }) => {
               <label className="block text-xs font-bold text-slate-500 uppercase mb-1.5 flex items-center gap-1">
                 <MapPin className="h-3.5 w-3.5 text-accent-orange animate-pulse" /> Local Landmark Address
               </label>
-              <APIProvider apiKey={import.meta.env.VITE_GOOGLE_MAPS_API_KEY} libraries={['places']}>
-                <PlaceAutocompleteInput
-                  initialValue={address}
-                  onPlaceSelect={(addr, lat, lng) => {
-                    setAddress(addr);
-                    setCoordinates({ lat, lng });
-                  }}
-                />
-              </APIProvider>
+              <PlaceAutocompleteInput
+                initialValue={address}
+                onPlaceSelect={(addr, lat, lng) => {
+                  setAddress(addr);
+                  setCoordinates({ lat, lng });
+                }}
+              />
             </div>
 
             <div>

@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { AppProvider, useApp } from './context/AppContext';
-import { APIProvider } from '@vis.gl/react-google-maps';
+
 import { Navbar } from './components/Navbar';
 import { Dashboard } from './components/Dashboard';
 import { ReportWizard } from './components/ReportWizard';
@@ -274,13 +274,11 @@ const AppContent: React.FC = () => {
 
 const App: React.FC = () => {
   return (
-    <APIProvider apiKey={import.meta.env.VITE_GOOGLE_MAPS_API_KEY} libraries={['visualization', 'places', 'marker']}>
-      <AuthProvider>
-        <AppProvider>
-          <AppContent />
-        </AppProvider>
-      </AuthProvider>
-    </APIProvider>
+    <AuthProvider>
+      <AppProvider>
+        <AppContent />
+      </AppProvider>
+    </AuthProvider>
   );
 };
 

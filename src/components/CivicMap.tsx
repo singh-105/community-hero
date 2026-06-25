@@ -1,101 +1,24 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { APIProvider, Map, Marker, InfoWindow, useMap } from '@vis.gl/react-google-maps';
-import { MarkerClusterer } from '@googlemaps/markerclusterer';
+import React, { useState, useEffect } from 'react';
+import { GoogleMap, useJsApiLoader, Marker, InfoWindow, MarkerClusterer, HeatmapLayer } from '@react-google-maps/api';
 import { isFirebaseAvailable, db } from '../firebase';
 import { collection, onSnapshot } from 'firebase/firestore';
 import { Flame } from 'lucide-react';
 import type { Issue } from '../types';
-import { HeatmapOverlay } from './HeatmapOverlay';
 
 interface CivicMapProps {
   onSelectIssue: (issue: Issue) => void;
   issues?: Issue[];
 }
 
-interface MarkerClustererComponentProps {
-  issues: Issue[];
-  setSelectedPin: (issue: Issue | null) => void;
-}
-
-const MarkerClustererComponent: React.FC<MarkerClustererComponentProps> = ({ issues, setSelectedPin }) => {
-  const map = useMap();
-  const [markers, setMarkers] = useState<{ [key: string]: google.maps.Marker }>({});
-  const clusterer = useRef<MarkerClusterer | null>(null);
-
-  // Initialize marker clusterer
-  useEffect(() => {
-    if (!map) return;
-    if (!clusterer.current) {
-      clusterer.current = new MarkerClusterer({ map });
-    }
-  }, [map]);
-
-  // Sync clusterer markers
-  useEffect(() => {
-    if (!clusterer.current) return;
-    clusterer.current.clearMarkers();
-    clusterer.current.addMarkers(Object.values(markers));
-  }, [markers]);
-
-  const setMarkerRef = (marker: google.maps.Marker | null, key: string) => {
-    if (marker) {
-      setMarkers((prev) => {
-        if (prev[key] === marker) return prev;
-        return { ...prev, [key]: marker };
-      });
-    } else {
-      setMarkers((prev) => {
-        if (!prev[key]) return prev;
-        const next = { ...prev };
-        delete next[key];
-        return next;
-      });
-    }
-  };
-
-  const getCategoryMarkerIcon = (category: string) => {
-    const colors = {
-      pothole: '#ef4444',      // Red
-      water_leak: '#3b82f6',   // Blue
-      garbage: '#10b981',      // Green
-      streetlight: '#eab308',  // Yellow
-      encroachment: '#a855f7', // Purple
-      other: '#6b7280',        // Gray
-    };
-    const color = colors[category as keyof typeof colors] || colors.other;
-    
-    const pinSvg = `
-      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="30" height="30">
-        <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z" fill="${color}" stroke="#ffffff" stroke-width="1.5"/>
-      </svg>
-    `;
-    return `data:image/svg+xml;utf-8,${encodeURIComponent(pinSvg)}`;
-  };
-
-  return (
-    <>
-      {issues.map((issue) => {
-        if (!issue.location || typeof issue.location.lat !== 'number' || typeof issue.location.lng !== 'number') {
-          return null;
-        }
-        return (
-          <Marker
-            key={issue.id}
-            position={{ lat: issue.location.lat, lng: issue.location.lng }}
-            ref={(marker) => setMarkerRef(marker, issue.id)}
-            icon={getCategoryMarkerIcon(issue.category)}
-            onClick={() => setSelectedPin(issue)}
-          />
-        );
-      })}
-    </>
-  );
-};
-
 export const CivicMap: React.FC<CivicMapProps> = ({ onSelectIssue, issues: propIssues }) => {
   const [issues, setIssues] = useState<Issue[]>(propIssues || []);
   const [selectedPin, setSelectedPin] = useState<Issue | null>(null);
   const [heatmapEnabled, setHeatmapEnabled] = useState(false);
+
+  const { isLoaded } = useJsApiLoader({
+    googleMapsApiKey: import.meta.env.VITE_GOOGLE_MAPS_API_KEY,
+    libraries: ['visualization', 'places'],
+  });
 
   // Real-time Firestore Sync
   useEffect(() => {
@@ -144,6 +67,36 @@ export const CivicMap: React.FC<CivicMapProps> = ({ onSelectIssue, issues: propI
     }
   }, [propIssues]);
 
+  if (!isLoaded) {
+    return (
+      <div className="h-[300px] md:h-[500px] w-full flex items-center justify-center bg-slate-50 border border-slate-200 rounded-2xl">
+        <div className="flex flex-col items-center gap-2">
+          <div className="h-6 w-6 border-2 border-primary-blue border-t-transparent rounded-full animate-spin"></div>
+          <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">Loading Map View...</span>
+        </div>
+      </div>
+    );
+  }
+
+  const getCategoryMarkerIcon = (category: string) => {
+    const colors = {
+      pothole: '#ef4444',      // Red
+      water_leak: '#3b82f6',   // Blue
+      garbage: '#10b981',      // Green
+      streetlight: '#eab308',  // Yellow
+      encroachment: '#a855f7', // Purple
+      other: '#6b7280',        // Gray
+    };
+    const color = colors[category as keyof typeof colors] || colors.other;
+    
+    const pinSvg = `
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="30" height="30">
+        <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z" fill="${color}" stroke="#ffffff" stroke-width="1.5"/>
+      </svg>
+    `;
+    return `data:image/svg+xml;utf-8,${encodeURIComponent(pinSvg)}`;
+  };
+
   const getStatusBg = (status: string) => {
     switch (status) {
       case 'reported': return 'bg-rose-50 text-rose-700 border-rose-200';
@@ -164,67 +117,102 @@ export const CivicMap: React.FC<CivicMapProps> = ({ onSelectIssue, issues: propI
     });
   };
 
+  // Convert issues to heatmap points weighted by upvote count
+  const heatmapData = issues
+    .filter((issue) => issue.location && typeof issue.location.lat === 'number' && typeof issue.location.lng === 'number')
+    .map((issue) => {
+      if (typeof window !== 'undefined' && window.google && window.google.maps) {
+        return {
+          location: new window.google.maps.LatLng(issue.location.lat, issue.location.lng),
+          weight: (issue.upvotes || 0) + 1,
+        };
+      }
+      return null;
+    })
+    .filter((p) => p !== null) as google.maps.visualization.WeightedLocation[];
+
   return (
     <div className="relative w-full rounded-2xl overflow-hidden shadow-md border border-slate-200 bg-slate-50">
       <div className="h-[300px] md:h-[500px] w-full relative">
-        <APIProvider
-          apiKey={import.meta.env.VITE_GOOGLE_MAPS_API_KEY}
-          libraries={['visualization', 'places', 'marker']}
+        <GoogleMap
+          mapContainerStyle={{ width: '100%', height: '100%' }}
+          center={{ lat: 12.9716, lng: 77.5946 }}
+          zoom={12}
+          options={{
+            gestureHandling: 'cooperative',
+            disableDefaultUI: false,
+          }}
         >
-          <Map
-            defaultCenter={{ lat: 12.9716, lng: 77.5946 }}
-            defaultZoom={12}
-            gestureHandling="cooperative"
-            disableDefaultUI={false}
-            style={{ width: '100%', height: '100%' }}
-          >
-            {/* Heatmap Overlay */}
-            {heatmapEnabled && <HeatmapOverlay issues={issues} />}
+          {/* Heatmap Overlay */}
+          {heatmapEnabled && heatmapData.length > 0 && (
+            <HeatmapLayer
+              data={heatmapData}
+              options={{
+                radius: 30,
+                opacity: 0.7,
+              }}
+            />
+          )}
 
-            {/* Custom Marker Pins & Clusterer */}
-            {!heatmapEnabled && (
-              <MarkerClustererComponent
-                issues={issues}
-                setSelectedPin={setSelectedPin}
-              />
-            )}
+          {/* Custom Marker Pins & Clusterer */}
+          {!heatmapEnabled && (
+            <MarkerClusterer>
+              {(clusterer) => (
+                <>
+                  {issues.map((issue) => {
+                    if (!issue.location || typeof issue.location.lat !== 'number' || typeof issue.location.lng !== 'number') {
+                      return null;
+                    }
+                    return (
+                      <Marker
+                        key={issue.id}
+                        position={{ lat: issue.location.lat, lng: issue.location.lng }}
+                        clusterer={clusterer}
+                        icon={getCategoryMarkerIcon(issue.category)}
+                        onClick={() => setSelectedPin(issue)}
+                      />
+                    );
+                  })}
+                </>
+              )}
+            </MarkerClusterer>
+          )}
 
-            {/* InfoWindow */}
-            {selectedPin && selectedPin.location && (
-              <InfoWindow
-                position={{ lat: selectedPin.location.lat, lng: selectedPin.location.lng }}
-                onCloseClick={() => setSelectedPin(null)}
-              >
-                <div className="p-2 space-y-2 text-slate-800 max-w-[240px]">
-                  <h4 className="font-extrabold text-sm leading-snug">{selectedPin.title}</h4>
-                  <div className="flex flex-wrap gap-1.5">
-                    <span className="text-[9px] font-black bg-blue-50 border border-blue-200/50 px-2 py-0.5 rounded text-primary-blue uppercase">
-                      {selectedPin.category}
-                    </span>
-                    <span className={`text-[9px] font-black border px-2 py-0.5 rounded uppercase ${getStatusBg(selectedPin.status)}`}>
-                      {selectedPin.status}
-                    </span>
-                  </div>
-                  <p className="text-[10px] text-slate-500 font-semibold">
-                    Reported by: <span className="text-slate-700 font-bold">{selectedPin.reportedByName || 'Citizen Hero'}</span>
-                  </p>
-                  <p className="text-[9px] text-slate-400 font-medium">
-                    {formatDate(selectedPin.createdAt)}
-                  </p>
-                  <button
-                    onClick={() => {
-                      onSelectIssue(selectedPin);
-                      setSelectedPin(null);
-                    }}
-                    className="w-full mt-1.5 flex items-center justify-center bg-primary-blue hover:bg-primary-blue-hover text-white text-xs font-bold py-1.5 rounded-lg transition-all shadow-xs cursor-pointer"
-                  >
-                    View Details
-                  </button>
+          {/* InfoWindow */}
+          {selectedPin && selectedPin.location && (
+            <InfoWindow
+              position={{ lat: selectedPin.location.lat, lng: selectedPin.location.lng }}
+              onCloseClick={() => setSelectedPin(null)}
+            >
+              <div className="p-2 space-y-2 text-slate-800 max-w-[240px]">
+                <h4 className="font-extrabold text-sm leading-snug">{selectedPin.title}</h4>
+                <div className="flex flex-wrap gap-1.5">
+                  <span className="text-[9px] font-black bg-blue-50 border border-blue-200/50 px-2 py-0.5 rounded text-primary-blue uppercase">
+                    {selectedPin.category}
+                  </span>
+                  <span className={`text-[9px] font-black border px-2 py-0.5 rounded uppercase ${getStatusBg(selectedPin.status)}`}>
+                    {selectedPin.status}
+                  </span>
                 </div>
-              </InfoWindow>
-            )}
-          </Map>
-        </APIProvider>
+                <p className="text-[10px] text-slate-500 font-semibold">
+                  Reported by: <span className="text-slate-700 font-bold">{selectedPin.reportedByName || 'Citizen Hero'}</span>
+                </p>
+                <p className="text-[9px] text-slate-400 font-medium">
+                  {formatDate(selectedPin.createdAt)}
+                </p>
+                <button
+                  onClick={() => {
+                    onSelectIssue(selectedPin);
+                    setSelectedPin(null);
+                  }}
+                  className="w-full mt-1.5 flex items-center justify-center bg-primary-blue hover:bg-primary-blue-hover text-white text-xs font-bold py-1.5 rounded-lg transition-all shadow-xs cursor-pointer"
+                >
+                  View Details
+                </button>
+              </div>
+            </InfoWindow>
+          )}
+        </GoogleMap>
 
         {/* Live Issue Count Badge (Bottom-Left) */}
         <div className="absolute bottom-6 left-3 bg-white/95 backdrop-blur-xs border border-slate-200/80 px-3 py-1.5 rounded-xl shadow-md z-10 flex items-center gap-1.5 pointer-events-none">
