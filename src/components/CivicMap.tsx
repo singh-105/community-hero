@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { APIProvider, Map, AdvancedMarker, Pin, InfoWindow, useMap } from '@vis.gl/react-google-maps';
+import { APIProvider, Map, Marker, InfoWindow, useMap } from '@vis.gl/react-google-maps';
 import { MarkerClusterer } from '@googlemaps/markerclusterer';
 import { isFirebaseAvailable, db } from '../firebase';
 import { collection, onSnapshot } from 'firebase/firestore';
@@ -19,7 +19,7 @@ interface MarkerClustererComponentProps {
 
 const MarkerClustererComponent: React.FC<MarkerClustererComponentProps> = ({ issues, setSelectedPin }) => {
   const map = useMap();
-  const [markers, setMarkers] = useState<{ [key: string]: google.maps.marker.AdvancedMarkerElement }>({});
+  const [markers, setMarkers] = useState<{ [key: string]: google.maps.Marker }>({});
   const clusterer = useRef<MarkerClusterer | null>(null);
 
   // Initialize marker clusterer
@@ -37,7 +37,7 @@ const MarkerClustererComponent: React.FC<MarkerClustererComponentProps> = ({ iss
     clusterer.current.addMarkers(Object.values(markers));
   }, [markers]);
 
-  const setMarkerRef = (marker: google.maps.marker.AdvancedMarkerElement | null, key: string) => {
+  const setMarkerRef = (marker: google.maps.Marker | null, key: string) => {
     if (marker) {
       setMarkers((prev) => {
         if (prev[key] === marker) return prev;
@@ -53,21 +53,23 @@ const MarkerClustererComponent: React.FC<MarkerClustererComponentProps> = ({ iss
     }
   };
 
-  const getCategoryColor = (category: string) => {
-    switch (category) {
-      case 'pothole':
-        return { bg: '#ef4444', border: '#b91c1c', glyph: '#fff' }; // Red
-      case 'water_leak':
-        return { bg: '#3b82f6', border: '#1d4ed8', glyph: '#fff' }; // Blue
-      case 'garbage':
-        return { bg: '#10b981', border: '#047857', glyph: '#fff' }; // Green
-      case 'streetlight':
-        return { bg: '#eab308', border: '#a16207', glyph: '#fff' }; // Yellow
-      case 'encroachment':
-        return { bg: '#a855f7', border: '#7e22ce', glyph: '#fff' }; // Purple
-      default:
-        return { bg: '#6b7280', border: '#374151', glyph: '#fff' }; // Gray
-    }
+  const getCategoryMarkerIcon = (category: string) => {
+    const colors = {
+      pothole: '#ef4444',      // Red
+      water_leak: '#3b82f6',   // Blue
+      garbage: '#10b981',      // Green
+      streetlight: '#eab308',  // Yellow
+      encroachment: '#a855f7', // Purple
+      other: '#6b7280',        // Gray
+    };
+    const color = colors[category as keyof typeof colors] || colors.other;
+    
+    const pinSvg = `
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="30" height="30">
+        <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z" fill="${color}" stroke="#ffffff" stroke-width="1.5"/>
+      </svg>
+    `;
+    return `data:image/svg+xml;utf-8,${encodeURIComponent(pinSvg)}`;
   };
 
   return (
@@ -76,20 +78,14 @@ const MarkerClustererComponent: React.FC<MarkerClustererComponentProps> = ({ iss
         if (!issue.location || typeof issue.location.lat !== 'number' || typeof issue.location.lng !== 'number') {
           return null;
         }
-        const colors = getCategoryColor(issue.category);
         return (
-          <AdvancedMarker
+          <Marker
             key={issue.id}
             position={{ lat: issue.location.lat, lng: issue.location.lng }}
             ref={(marker) => setMarkerRef(marker, issue.id)}
+            icon={getCategoryMarkerIcon(issue.category)}
             onClick={() => setSelectedPin(issue)}
-          >
-            <Pin
-              background={colors.bg}
-              borderColor={colors.border}
-              glyphColor={colors.glyph}
-            />
-          </AdvancedMarker>
+          />
         );
       })}
     </>
@@ -178,7 +174,6 @@ export const CivicMap: React.FC<CivicMapProps> = ({ onSelectIssue, issues: propI
           <Map
             defaultCenter={{ lat: 12.9716, lng: 77.5946 }}
             defaultZoom={12}
-            mapId={import.meta.env.VITE_GOOGLE_MAPS_ID}
             gestureHandling="cooperative"
             disableDefaultUI={false}
             style={{ width: '100%', height: '100%' }}
