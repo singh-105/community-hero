@@ -178,7 +178,7 @@ export const CivicMap: React.FC<CivicMapProps> = ({ onSelectIssue, issues: propI
           <Map
             defaultCenter={{ lat: 12.9716, lng: 77.5946 }}
             defaultZoom={12}
-            mapId="community-hero-map"
+            mapId={import.meta.env.VITE_GOOGLE_MAPS_ID}
             gestureHandling="cooperative"
             disableDefaultUI={false}
             style={{ width: '100%', height: '100%' }}
