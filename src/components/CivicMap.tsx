@@ -173,7 +173,7 @@ export const CivicMap: React.FC<CivicMapProps> = ({ onSelectIssue, issues: propI
       <div className="h-[300px] md:h-[500px] w-full relative">
         <APIProvider
           apiKey={import.meta.env.VITE_GOOGLE_MAPS_API_KEY}
-          libraries={['visualization', 'places']}
+          libraries={['visualization', 'places', 'marker']}
         >
           <Map
             defaultCenter={{ lat: 12.9716, lng: 77.5946 }}
