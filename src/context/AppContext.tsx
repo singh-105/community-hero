@@ -9,7 +9,7 @@ interface AppContextType {
   drives: VolunteeringDrive[];
   leaderboard: UserProfile[];
   loading: boolean;
-  reportIssue: (title: string, description: string, category: IssueCategory, lat: number, lng: number, address: string, imageURL?: string) => Promise<string>;
+  reportIssue: (title: string, description: string, category: IssueCategory, address: string, imageURL: string | undefined, lat: number, lng: number) => Promise<string>;
   upvoteIssue: (issueId: string) => Promise<void>;
   updateIssueStatus: (issueId: string, status: 'assigned' | 'in_progress' | 'resolved', notes?: string, resolvedImageUrl?: string) => Promise<void>;
   rsvpDrive: (driveId: string) => Promise<void>;
@@ -198,10 +198,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     title: string,
     description: string,
     category: IssueCategory,
-    lat: number,
-    lng: number,
     address: string,
-    imageURL?: string
+    imageURL: string | undefined,
+    lat: number,
+    lng: number
   ): Promise<string> => {
     if (!user) throw new Error("User must be signed in.");
 

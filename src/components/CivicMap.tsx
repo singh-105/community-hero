@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { GoogleMap, useJsApiLoader, Marker, InfoWindow, MarkerClusterer, HeatmapLayer } from '@react-google-maps/api';
+import { GoogleMap, useJsApiLoader, Marker, InfoWindow, HeatmapLayer } from '@react-google-maps/api';
 import { isFirebaseAvailable, db } from '../firebase';
 import { collection, onSnapshot } from 'firebase/firestore';
 import { Flame } from 'lucide-react';
@@ -27,12 +27,18 @@ export const CivicMap: React.FC<CivicMapProps> = ({ onSelectIssue, issues: propI
         const issuesList: Issue[] = [];
         snapshot.forEach((docSnap) => {
           const data = docSnap.data();
+          const baseLat = 12.9716;
+          const baseLng = 77.5946;
           issuesList.push({
             id: docSnap.id,
             title: data.title || '',
             description: data.description || '',
             category: data.category || 'other',
-            location: data.location || { lat: 12.9716, lng: 77.5946, address: '' },
+            location: data.location?.lat ? data.location : {
+              lat: baseLat + (Math.random() - 0.5) * 0.05,
+              lng: baseLng + (Math.random() - 0.5) * 0.05,
+              address: data.location?.address || ''
+            },
             imageURL: data.imageURL || data.imageUrl || '',
             imageUrl: data.imageURL || data.imageUrl || '',
             resolvedImageUrl: data.resolvedImageUrl || '',
@@ -154,29 +160,19 @@ export const CivicMap: React.FC<CivicMapProps> = ({ onSelectIssue, issues: propI
             />
           )}
 
-          {/* Custom Marker Pins & Clusterer */}
-          {!showHeatmap && (
-            <MarkerClusterer>
-              {(clusterer) => (
-                <>
-                  {issues.map((issue) => {
-                    if (!issue.location || typeof issue.location.lat !== 'number' || typeof issue.location.lng !== 'number') {
-                      return null;
-                    }
-                    return (
-                      <Marker
-                        key={issue.id}
-                        position={{ lat: issue.location.lat, lng: issue.location.lng }}
-                        clusterer={clusterer}
-                        icon={getCategoryMarkerIcon(issue.category)}
-                        onClick={() => setSelectedIssue(issue)}
-                      />
-                    );
-                  })}
-                </>
-              )}
-            </MarkerClusterer>
-          )}
+          {!showHeatmap && issues.map((issue) => {
+            const lat = issue.location?.lat;
+            const lng = issue.location?.lng;
+            if (typeof lat !== 'number' || typeof lng !== 'number') return null;
+            return (
+              <Marker
+                key={issue.id}
+                position={{ lat, lng }}
+                icon={getCategoryMarkerIcon(issue.category)}
+                onClick={() => setSelectedIssue(issue)}
+              />
+            );
+          })}
 
           {/* InfoWindow */}
           {selectedIssue !== null && selectedIssue.location && (
